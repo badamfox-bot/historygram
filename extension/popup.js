@@ -1,3 +1,3 @@
 document.getElementById("generate").addEventListener("click", () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL("portrait.html") });
+  api.tabs.create({ url: api.runtime.getURL("portrait.html") });
 });

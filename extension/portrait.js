@@ -22,7 +22,7 @@ function formatHour(hour) {
 
 async function buildPortrait() {
   const startTime = Date.now() - DAYS_BACK * 24 * 60 * 60 * 1000;
-  const results = await chrome.history.search({
+  const results = await api.history.search({
     text: "",
     startTime,
     maxResults: MAX_RESULTS,
