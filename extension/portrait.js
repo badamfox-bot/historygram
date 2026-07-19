@@ -134,6 +134,7 @@ async function buildPortrait() {
     busiestHour,
     theme,
     prefix,
+    generatedAt: new Date(),
   });
 }
 
@@ -154,7 +155,7 @@ function startAnimation(data) {
 }
 
 function drawCard(
-  { title, topCategory, topDomains, uniqueSites, totalVisits, busiestHour, theme, prefix },
+  { title, topCategory, topDomains, uniqueSites, totalVisits, busiestHour, theme, prefix, generatedAt },
   time
 ) {
   const W = canvas.width;
@@ -219,8 +220,11 @@ function drawCard(
   ctx.fillText(
     `Last ${DAYS_BACK} days · ${totalVisits} visits · generated locally`,
     W / 2,
-    H - 60
+    H - 88
   );
+  ctx.font = "400 18px 'Segoe UI', sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.fillText(`Generated at ${generatedAt.toLocaleTimeString()}`, W / 2, H - 58);
   ctx.font = "600 24px 'Segoe UI', sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.fillText("historygram", W / 2, H - 25);
