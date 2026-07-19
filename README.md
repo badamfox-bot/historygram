@@ -9,7 +9,9 @@ Websites can't read your browsing history — modern browsers deliberately block
 ## Project layout
 
 - `extension/` — the WebExtension (Manifest V3), works in both Chrome and Firefox. Reads history locally and renders the portrait to a `<canvas>`, exportable as a PNG.
-- `docs/` — a small static landing page (deployed via GitHub Pages) explaining the project and how to install it.
+- `docs/` — a small static landing page (deployed via GitHub Pages) explaining the project, how to install it, and a demo gallery cycling through every category's mascot with fake example data.
+
+`docs/categories.js` and `docs/mascot.js` are copies of the files in `extension/` — GitHub Pages only serves the `docs/` folder, and a browser extension can't load files from outside its own package, so there's no way to share one copy between them without a build step. **If you change the mascot or category logic in `extension/`, copy the same change into `docs/`** or the landing-page demo will drift out of sync with the real extension.
 
 ## Installing (not yet store-published)
 
