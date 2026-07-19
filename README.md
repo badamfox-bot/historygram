@@ -9,7 +9,7 @@ Websites can't read your browsing history — modern browsers deliberately block
 ## Project layout
 
 - `extension/` — the Chrome extension (Manifest V3). Reads `chrome.history` locally and renders the portrait to a `<canvas>`, exportable as a PNG.
-- `site/` — a small static landing page (deployed via GitHub Pages) explaining the project and how to install it.
+- `docs/` — a small static landing page (deployed via GitHub Pages) explaining the project and how to install it.
 
 ## Installing (unpacked, for now)
 
