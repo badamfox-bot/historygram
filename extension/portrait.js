@@ -34,25 +34,42 @@ async function buildPortrait() {
     return;
   }
 
+  // HistoryItem.visitCount is a *lifetime* total for that URL, not scoped to
+  // our search window — using it as weight made the portrait dominated by
+  // old habits and barely responsive to recent browsing. Pull real per-visit
+  // timestamps instead and keep only the ones inside the last DAYS_BACK days.
+  const perUrlVisits = await Promise.all(
+    results.map(async (item) => {
+      try {
+        const visits = await api.history.getVisits({ url: item.url });
+        return visits.filter((v) => v.visitTime >= startTime);
+      } catch {
+        return [{ visitTime: item.lastVisitTime }];
+      }
+    })
+  );
+
   const domainCounts = {};
   const categoryCounts = {};
   const hourCounts = new Array(24).fill(0);
   let totalWeight = 0;
 
-  for (const item of results) {
+  results.forEach((item, i) => {
     const domain = hostnameOf(item.url);
-    if (!domain) continue;
+    if (!domain) return;
 
-    const weight = item.visitCount && item.visitCount > 0 ? item.visitCount : 1;
+    const visits = perUrlVisits[i];
+    const weight = visits.length > 0 ? visits.length : 1;
     domainCounts[domain] = (domainCounts[domain] || 0) + weight;
     totalWeight += weight;
 
     const category = categorize(domain);
     categoryCounts[category] = (categoryCounts[category] || 0) + weight;
 
-    const hour = new Date(item.lastVisitTime).getHours();
-    hourCounts[hour] += weight;
-  }
+    for (const visit of visits) {
+      hourCounts[new Date(visit.visitTime).getHours()] += 1;
+    }
+  });
 
   const topDomains = Object.entries(domainCounts)
     .sort((a, b) => b[1] - a[1])
