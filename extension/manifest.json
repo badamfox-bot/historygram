@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Historygram",
+  "version": "0.1.0",
+  "description": "Turns your browsing history into a shareable portrait image. All processing happens locally.",
+  "permissions": ["history"],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

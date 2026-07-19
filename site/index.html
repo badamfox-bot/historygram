@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Historygram — a portrait of your browsing history</title>
+  <meta name="description" content="A Chrome extension that turns your browsing history into a shareable portrait image. 100% local, nothing ever leaves your browser." />
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f4f7;
+      --fg: #1a1a1a;
+      --muted: #55555f;
+      --card: #ffffff;
+      --accent: #6c5ce7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16161c;
+        --fg: #f2f2f5;
+        --muted: #a8a8b3;
+        --card: #1f1f27;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 64px 24px 96px;
+    }
+    .eyebrow {
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: 44px;
+      line-height: 1.1;
+      margin: 12px 0 16px;
+    }
+    p.lead {
+      font-size: 19px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 28px;
+      margin-top: 32px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 20px;
+    }
+    ol {
+      padding-left: 20px;
+      line-height: 1.8;
+    }
+    code {
+      background: rgba(127, 127, 127, 0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    a.button {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 12px 22px;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    footer {
+      margin-top: 48px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    footer a { color: inherit; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Free · Open Source · Runs Locally</div>
+    <h1>See your browsing history as a portrait.</h1>
+    <p class="lead">
+      Historygram is a Chrome extension that turns 30 days of your browsing
+      history into a fun, shareable image — top sites, busiest hours, and a
+      personality tag like <em>"Night Owl Builder"</em> or
+      <em>"Early Bird Scroller."</em>
+    </p>
+
+    <div class="card">
+      <h2>Your data never leaves your device</h2>
+      <p>
+        Websites can't normally read your browser history — that's a
+        deliberate security boundary every modern browser enforces. Historygram
+        works differently: as an installed extension, it asks for your
+        explicit permission, reads your history locally, and renders the
+        image entirely in your browser. No servers, no uploads, no tracking.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Install it (unpacked, for now)</h2>
+      <ol>
+        <li>Clone or download the <a href="https://github.com/badamfox-bot/historygram">GitHub repo</a></li>
+        <li>Open <code>chrome://extensions</code></li>
+        <li>Turn on <strong>Developer mode</strong> (top right)</li>
+        <li>Click <strong>Load unpacked</strong> and select the <code>extension/</code> folder</li>
+        <li>Click the Historygram icon, then <strong>Generate My Portrait</strong></li>
+      </ol>
+      <a class="button" href="https://github.com/badamfox-bot/historygram">View on GitHub</a>
+    </div>
+
+    <footer>
+      Built as a fun, free, open-source project.
+      <a href="https://github.com/badamfox-bot/historygram">Source on GitHub</a>.
+    </footer>
+  </main>
+</body>
+</html>
