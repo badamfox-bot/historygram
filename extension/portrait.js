@@ -34,24 +34,70 @@ async function buildPortrait() {
     return;
   }
 
+  // HistoryItem.visitCount is a *lifetime* total for that URL, not scoped to
+  // our search window, so it can't be used as weight directly. Getting exact
+  // per-visit timestamps (history.getVisits) is accurate but costs one call
+  // per URL — too expensive to do for someone's entire 30-day history.
+  //
+  // Two-pass instead: a cheap first pass (1 point per URL that appeared at
+  // all in the window) to shortlist which domains could plausibly win a
+  // slot on the card, then real per-visit timestamps only for that
+  // shortlist. Domains outside it can't outrank the shortlist anyway, so
+  // exact counts for them wouldn't change anything the user sees.
+  const CANDIDATE_DOMAIN_LIMIT = 20;
+
+  const domainItems = {};
+  const roughDomainCounts = {};
+  for (const item of results) {
+    const domain = hostnameOf(item.url);
+    if (!domain) continue;
+    roughDomainCounts[domain] = (roughDomainCounts[domain] || 0) + 1;
+    (domainItems[domain] ||= []).push(item);
+  }
+
+  const candidateDomains = new Set(
+    Object.entries(roughDomainCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, CANDIDATE_DOMAIN_LIMIT)
+      .map(([domain]) => domain)
+  );
+
   const domainCounts = {};
   const categoryCounts = {};
   const hourCounts = new Array(24).fill(0);
   let totalWeight = 0;
 
-  for (const item of results) {
-    const domain = hostnameOf(item.url);
-    if (!domain) continue;
-
-    const weight = item.visitCount && item.visitCount > 0 ? item.visitCount : 1;
-    domainCounts[domain] = (domainCounts[domain] || 0) + weight;
-    totalWeight += weight;
-
+  for (const domain of Object.keys(roughDomainCounts)) {
+    const items = domainItems[domain];
     const category = categorize(domain);
-    categoryCounts[category] = (categoryCounts[category] || 0) + weight;
+    let weight;
 
-    const hour = new Date(item.lastVisitTime).getHours();
-    hourCounts[hour] += weight;
+    if (candidateDomains.has(domain)) {
+      const visitLists = await Promise.all(
+        items.map(async (item) => {
+          try {
+            const visits = await api.history.getVisits({ url: item.url });
+            return visits.filter((v) => v.visitTime >= startTime);
+          } catch {
+            return [{ visitTime: item.lastVisitTime }];
+          }
+        })
+      );
+      const visits = visitLists.flat();
+      weight = visits.length > 0 ? visits.length : items.length;
+      for (const visit of visits) {
+        hourCounts[new Date(visit.visitTime).getHours()] += 1;
+      }
+    } else {
+      weight = items.length;
+      for (const item of items) {
+        hourCounts[new Date(item.lastVisitTime).getHours()] += 1;
+      }
+    }
+
+    domainCounts[domain] = weight;
+    categoryCounts[category] = (categoryCounts[category] || 0) + weight;
+    totalWeight += weight;
   }
 
   const topDomains = Object.entries(domainCounts)
