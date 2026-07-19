@@ -29,23 +29,32 @@ const lighten = (hex, amt) => mix(hex, "#ffffff", amt);
 const darken = (hex, amt) => mix(hex, "#000000", amt);
 
 const EXPRESSIONS = {
-  "Dev & Tools": { brow: "slant", mouth: "smirk" },
-  "Entertainment": { brow: "raised", mouth: "grin" },
-  "Social": { brow: "slant", mouth: "smirk", squint: 0.3, lookDx: -0.15 },
-  "Shopping": { brow: "raised", mouth: "grin" },
-  "News": { brow: "oneRaised", mouth: "flat" },
-  "Search": { brow: "raised", mouth: "pursed", squint: 0.25, lookDy: -0.08 },
-  "Email": { brow: "droopy", mouth: "flat", squint: 0.45 },
-  "Finance": { brow: "raised", mouth: "grin" },
-  "Productivity": { brow: "slant", mouth: "smirk" },
-  "Reference": { brow: "oneRaised", mouth: "smile" },
-  "Maps & Travel": { brow: "raised", mouth: "smile", lookDy: -0.08 },
-  "AI & Assistants": { brow: "raised", mouth: "smile", sparkles: true },
-  "Music": { closed: true, mouth: "o" },
-  "Other": { brow: "raised", mouth: "o", crossed: true },
+  "Dev & Tools": { brow: "slant", mouth: "smirk", ears: "fox", whiskers: true },
+  "Entertainment": { brow: "raised", mouth: "grin", ears: "bunny" },
+  "Social": { brow: "slant", mouth: "smirk", squint: 0.3, lookDx: -0.15, ears: "bunny" },
+  "Shopping": { brow: "raised", mouth: "grin", ears: "round" },
+  "News": { brow: "oneRaised", mouth: "flat", ears: "fox", whiskers: true },
+  "Search": { brow: "raised", mouth: "pursed", squint: 0.25, lookDy: -0.08, ears: "fox", whiskers: true },
+  "Email": { brow: "droopy", mouth: "flat", squint: 0.45, ears: "round" },
+  "Finance": { brow: "raised", mouth: "grin", ears: "round" },
+  "Productivity": { brow: "slant", mouth: "smirk", ears: "round" },
+  "Reference": { brow: "oneRaised", mouth: "smile", ears: "round" },
+  "Maps & Travel": { brow: "raised", mouth: "smile", lookDy: -0.08, ears: "wing" },
+  "AI & Assistants": { brow: "raised", mouth: "smile", sparkles: true, ears: "antenna" },
+  "Music": { closed: true, mouth: "o", ears: "wing" },
+  "Other": { brow: "raised", mouth: "o", crossed: true, ears: "round" },
 };
 
-function drawMascot(ctx, cx, cy, r, category, prefix) {
+function blinkPulse(time) {
+  const cycle = 4200;
+  const windowMs = 220;
+  const t = time % cycle;
+  if (t < cycle - windowMs) return 0;
+  const p = (t - (cycle - windowMs)) / windowMs;
+  return Math.sin(p * Math.PI);
+}
+
+function drawMascot(ctx, cx, cy, r, category, prefix, time = 0) {
   ctx.save();
 
   const theme = CATEGORY_THEMES[category] || CATEGORY_THEMES["Other"];
@@ -53,11 +62,28 @@ function drawMascot(ctx, cx, cy, r, category, prefix) {
   const outlineColor = darken(theme.to, 0.45);
   const expr = EXPRESSIONS[category] || EXPRESSIONS["Other"];
 
-  // Ground shadow
+  const bob = Math.sin(time / 900) * r * 0.035;
+  const bobNorm = Math.sin(time / 900); // -1..1
+  const sway = Math.sin(time / 1500) * 0.035;
+
+  // Ground shadow stays put; pulses gently with the bob for a grounded feel
   ctx.beginPath();
-  ctx.ellipse(cx, cy + r * 0.95, r * 0.7, r * 0.16, 0, 0, Math.PI * 2);
+  ctx.ellipse(
+    cx,
+    cy + r * 0.95,
+    r * 0.7 * (1 - bobNorm * 0.06),
+    r * 0.16 * (1 - bobNorm * 0.06),
+    0,
+    0,
+    Math.PI * 2
+  );
   ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.fill();
+
+  ctx.save();
+  ctx.translate(cx, cy + bob);
+  ctx.rotate(sway);
+  ctx.translate(-cx, -cy);
 
   // Stub feet
   ctx.fillStyle = outlineColor;
@@ -66,6 +92,12 @@ function drawMascot(ctx, cx, cy, r, category, prefix) {
     ctx.ellipse(cx + dx, cy + r * 0.88, r * 0.16, r * 0.1, 0, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Tail, peeking out from behind (drawn before the body so the body overlaps its base)
+  drawTail(ctx, cx, cy, r, bodyColor, outlineColor, time);
+
+  // Ears, drawn before the body so the body overlaps their base — reads as attached
+  drawEars(ctx, cx, cy, r, expr.ears || "round", bodyColor, outlineColor);
 
   // Body
   ctx.beginPath();
@@ -85,7 +117,7 @@ function drawMascot(ctx, cx, cy, r, category, prefix) {
   ctx.fill();
   ctx.restore();
 
-  drawFace(ctx, cx, cy - r * 0.05, r, expr, outlineColor);
+  drawFace(ctx, cx, cy - r * 0.05, r, expr, outlineColor, blinkPulse(time));
   drawBlush(ctx, cx, cy, r, theme.to);
 
   if (expr.sparkles) drawSparkles(ctx, cx, cy, r);
@@ -114,13 +146,15 @@ function drawMascot(ctx, cx, cy, r, category, prefix) {
   if (prefix === "Night Owl ") drawNightModifier(ctx, cx, cy, r);
   else if (prefix === "Early Bird ") drawMorningModifier(ctx, cx, cy, r);
 
-  ctx.restore();
+  ctx.restore(); // undo bob/sway transform
+  ctx.restore(); // outer save
 }
 
-function drawFace(ctx, cx, cy, r, expr, outlineColor) {
+function drawFace(ctx, cx, cy, r, expr, outlineColor, blink = 0) {
   const eyeDx = r * 0.3;
   const eyeY = cy - r * 0.02;
   const eyeR = r * 0.19;
+  const squint = Math.min(1, (expr.squint || 0) + blink);
 
   if (expr.closed) {
     ctx.strokeStyle = outlineColor;
@@ -134,17 +168,125 @@ function drawFace(ctx, cx, cy, r, expr, outlineColor) {
     const lookDy = (expr.lookDy || 0) * r;
     if (expr.crossed) {
       const crossVal = r * 0.28;
-      drawBigEye(ctx, cx - eyeDx, eyeY, eyeR, expr.squint || 0, crossVal, lookDy, outlineColor);
-      drawBigEye(ctx, cx + eyeDx, eyeY, eyeR, expr.squint || 0, -crossVal, lookDy, outlineColor);
+      drawBigEye(ctx, cx - eyeDx, eyeY, eyeR, squint, crossVal, lookDy, outlineColor);
+      drawBigEye(ctx, cx + eyeDx, eyeY, eyeR, squint, -crossVal, lookDy, outlineColor);
     } else {
       const lookDx = (expr.lookDx || 0) * r;
-      drawBigEye(ctx, cx - eyeDx, eyeY, eyeR, expr.squint || 0, lookDx, lookDy, outlineColor);
-      drawBigEye(ctx, cx + eyeDx, eyeY, eyeR, expr.squint || 0, lookDx, lookDy, outlineColor);
+      drawBigEye(ctx, cx - eyeDx, eyeY, eyeR, squint, lookDx, lookDy, outlineColor);
+      drawBigEye(ctx, cx + eyeDx, eyeY, eyeR, squint, lookDx, lookDy, outlineColor);
     }
   }
 
   drawEyebrows(ctx, cx, eyeY, r, eyeDx, expr.brow, outlineColor);
+  drawNose(ctx, cx, cy + r * 0.18, r, outlineColor);
+  if (expr.whiskers) drawWhiskers(ctx, cx, cy + r * 0.2, r, outlineColor);
   drawMouth(ctx, cx, cy + r * 0.36, r, expr.mouth, outlineColor);
+}
+
+function drawNose(ctx, cx, cy, r, outlineColor) {
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, r * 0.05, r * 0.035, 0, 0, Math.PI * 2);
+  ctx.fillStyle = outlineColor;
+  ctx.fill();
+}
+
+function drawWhiskers(ctx, cx, cy, r, outlineColor) {
+  ctx.strokeStyle = outlineColor;
+  ctx.lineWidth = r * 0.025;
+  ctx.lineCap = "round";
+  for (const side of [-1, 1]) {
+    for (const dy of [-r * 0.05, 0, r * 0.05]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + side * r * 0.42, cy + dy);
+      ctx.lineTo(cx + side * r * 0.68, cy + dy * 1.6);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawEars(ctx, cx, cy, r, style, bodyColor, outlineColor) {
+  ctx.fillStyle = bodyColor;
+  ctx.strokeStyle = outlineColor;
+  ctx.lineWidth = r * 0.05;
+
+  const baseY = cy - r * 0.78;
+  const dxs = [-r * 0.42, r * 0.42];
+
+  switch (style) {
+    case "fox":
+      for (const dx of dxs) {
+        const sign = Math.sign(dx) || 1;
+        ctx.beginPath();
+        ctx.moveTo(cx + dx - sign * r * 0.16, baseY + r * 0.15);
+        ctx.lineTo(cx + dx + sign * r * 0.06, baseY - r * 0.42);
+        ctx.lineTo(cx + dx + sign * r * 0.22, baseY + r * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      break;
+    case "bunny":
+      for (const dx of dxs) {
+        ctx.beginPath();
+        ctx.ellipse(cx + dx, baseY - r * 0.28, r * 0.15, r * 0.48, dx < 0 ? -0.12 : 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      break;
+    case "wing":
+      for (const dx of dxs) {
+        const sign = Math.sign(dx) || 1;
+        ctx.beginPath();
+        ctx.moveTo(cx + dx - sign * r * 0.1, baseY + r * 0.2);
+        ctx.quadraticCurveTo(cx + dx + sign * r * 0.42, baseY - r * 0.1, cx + dx + sign * r * 0.1, baseY - r * 0.4);
+        ctx.quadraticCurveTo(cx + dx - sign * r * 0.05, baseY - r * 0.1, cx + dx - sign * r * 0.1, baseY + r * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      break;
+    case "antenna":
+      for (const dx of dxs) {
+        ctx.beginPath();
+        ctx.moveTo(cx + dx, baseY + r * 0.2);
+        ctx.lineTo(cx + dx * 1.15, baseY - r * 0.35);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx + dx * 1.15, baseY - r * 0.42, r * 0.09, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      break;
+    case "round":
+    default:
+      for (const dx of dxs) {
+        ctx.beginPath();
+        ctx.arc(cx + dx, baseY - r * 0.12, r * 0.24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+  }
+}
+
+function drawTail(ctx, cx, cy, r, bodyColor, outlineColor, time = 0) {
+  const wag = Math.sin(time / 500) * 0.25;
+  const tx = cx - r * 0.72;
+  const ty = cy + r * 0.55;
+
+  ctx.save();
+  ctx.translate(tx, ty);
+  ctx.rotate(wag);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(-r * 0.35, -r * 0.1, -r * 0.28, -r * 0.42);
+  ctx.quadraticCurveTo(-r * 0.05, -r * 0.28, 0, 0);
+  ctx.closePath();
+  ctx.fillStyle = bodyColor;
+  ctx.fill();
+  ctx.lineWidth = r * 0.04;
+  ctx.strokeStyle = outlineColor;
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawBigEye(ctx, x, y, r, squint, lookDx, lookDy, outlineColor) {

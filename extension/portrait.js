@@ -79,7 +79,7 @@ async function buildPortrait() {
   const theme = CATEGORY_THEMES[topCategory];
   const title = `${prefix}${theme.noun}`;
 
-  render({
+  startAnimation({
     title,
     topCategory,
     topDomains,
@@ -91,16 +91,26 @@ async function buildPortrait() {
   });
 }
 
-function render({
-  title,
-  topCategory,
-  topDomains,
-  uniqueSites,
-  totalVisits,
-  busiestHour,
-  theme,
-  prefix,
-}) {
+let animationFrameId = null;
+
+function startAnimation(data) {
+  statusEl.classList.add("hidden");
+  canvas.classList.remove("hidden");
+  downloadBtn.classList.remove("hidden");
+
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+  function loop(time) {
+    drawCard(data, time);
+    animationFrameId = requestAnimationFrame(loop);
+  }
+  animationFrameId = requestAnimationFrame(loop);
+}
+
+function drawCard(
+  { title, topCategory, topDomains, uniqueSites, totalVisits, busiestHour, theme, prefix },
+  time
+) {
   const W = canvas.width;
   const H = canvas.height;
 
@@ -119,7 +129,7 @@ function render({
   ctx.font = "800 78px 'Segoe UI', sans-serif";
   wrapCenteredText(title, W / 2, 240, 900, 84);
 
-  drawMascot(ctx, W / 2, 500, 150, topCategory, prefix);
+  drawMascot(ctx, W / 2, 530, 145, topCategory, prefix, time);
 
   ctx.font = "500 30px 'Segoe UI', sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.85)";
@@ -168,10 +178,6 @@ function render({
   ctx.font = "600 24px 'Segoe UI', sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.fillText("historygram", W / 2, H - 25);
-
-  statusEl.classList.add("hidden");
-  canvas.classList.remove("hidden");
-  downloadBtn.classList.remove("hidden");
 }
 
 function drawStat(x, y, value, label) {
