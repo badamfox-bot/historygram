@@ -26,8 +26,19 @@ const demoCtx = demoCanvas.getContext("2d");
 const demoLabel = document.getElementById("demoLabel");
 const demoPrev = document.getElementById("demoPrev");
 const demoNext = document.getElementById("demoNext");
+const engineSwitch = document.getElementById("engineSwitch");
 
 let demoIndex = 0;
+let demoEngine = "A";
+
+engineSwitch.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-engine]");
+  if (!btn) return;
+  demoEngine = btn.dataset.engine;
+  for (const b of engineSwitch.querySelectorAll("button")) {
+    b.classList.toggle("active", b === btn);
+  }
+});
 
 function formatHourDemo(hour) {
   const period = hour >= 12 ? "PM" : "AM";
@@ -94,7 +105,13 @@ function drawDemoCard(profile, time) {
   demoCtx.font = "800 78px 'Segoe UI', sans-serif";
   wrapCenteredTextDemo(title, W / 2, 240, 900, 84);
 
-  drawMascot(demoCtx, W / 2, 530, 145, profile.category, "", time);
+  if (demoEngine === "B") {
+    EngineB.draw(demoCtx, W / 2, 530, 145, profile.category, "", time);
+  } else if (demoEngine === "C") {
+    EngineC.draw(demoCtx, W / 2, 530, 145, profile.category, "", time);
+  } else {
+    drawMascot(demoCtx, W / 2, 530, 145, profile.category, "", time);
+  }
 
   demoCtx.font = "500 30px 'Segoe UI', sans-serif";
   demoCtx.fillStyle = "rgba(255,255,255,0.85)";
