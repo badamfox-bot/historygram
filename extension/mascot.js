@@ -591,27 +591,86 @@ function drawAction(ctx, cx, cy, r, category, accent, outlineColor, bodyColor, t
       break;
     }
     case "Email": {
-      roundRectPath(ctx, px - r * 0.3, py - r * 0.2, r * 0.6, r * 0.4, 4);
+      // a little desk: monitor showing an inbox, a keyboard, typing hands,
+      // and envelopes flying out to be sent and back in as they arrive
+      const deskY = py + r * 0.1;
+      const deskW = r * 0.72;
+      const monX = px - r * 0.02;
+      const monY = deskY - r * 0.42;
+
+      roundRectPath(ctx, monX - deskW / 2, monY - r * 0.32, deskW, r * 0.5, 6);
+      ctx.fillStyle = outlineColor;
+      ctx.fill();
+      roundRectPath(ctx, monX - deskW / 2 + r * 0.05, monY - r * 0.32 + r * 0.05, deskW - r * 0.1, r * 0.5 - r * 0.1, 4);
+      ctx.fillStyle = "#eaf3ff";
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(0,0,0,0.18)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const ry = monY - r * 0.17 + i * r * 0.13;
+        ctx.beginPath();
+        ctx.moveTo(monX - deskW / 2 + r * 0.1, ry);
+        ctx.lineTo(monX + deskW / 2 - r * 0.1, ry);
+        ctx.stroke();
+      }
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(monX - deskW / 2 + r * 0.08, monY - r * 0.17, r * 0.03, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = outlineColor;
+      ctx.fillRect(monX - r * 0.04, monY + r * 0.18, r * 0.08, r * 0.1);
+      ctx.fillRect(monX - r * 0.15, deskY - r * 0.02, r * 0.3, r * 0.05);
+
+      roundRectPath(ctx, monX - deskW / 2, deskY, deskW, r * 0.16, 4);
       ctx.fillStyle = "#ffffff";
       ctx.fill();
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = r * 0.02;
       ctx.stroke();
 
-      const wiggle = Math.sin(time / 160) * r * 0.05;
-      ctx.save();
-      ctx.translate(px + wiggle, py - r * 0.02);
-      ctx.rotate(-0.5);
-      ctx.fillStyle = accent;
-      roundRectPath(ctx, -r * 0.03, -r * 0.22, r * 0.06, r * 0.3, 3);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.03, r * 0.08);
-      ctx.lineTo(r * 0.03, r * 0.08);
-      ctx.lineTo(0, r * 0.16);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+      const bounce = Math.sin(time / 130) * r * 0.02;
+      drawHand(ctx, monX - r * 0.15, deskY + r * 0.08 - bounce, -0.1, r, bodyColor, outlineColor);
+      drawHand(ctx, monX + r * 0.15, deskY + r * 0.08 + bounce, 0.1, r, bodyColor, outlineColor);
 
-      drawHand(ctx, px + wiggle, py + r * 0.22, -0.5, r, bodyColor, outlineColor);
+      const flights = [
+        { period: 2600, offset: 0, out: true, ang: -0.7 },
+        { period: 2600, offset: 1300, out: false, ang: 0.9 },
+        { period: 3400, offset: 900, out: true, ang: 0.35 },
+      ];
+      for (const f of flights) {
+        const t = ((time + f.offset) % f.period) / f.period;
+        const dist = r * 1.1;
+        const farX = monX + Math.cos(f.ang) * dist;
+        const farY = monY - r * 0.6 + Math.sin(f.ang) * dist * 0.4;
+        const fromX = f.out ? monX : farX;
+        const fromY = f.out ? monY - r * 0.1 : farY;
+        const toX = f.out ? farX : monX;
+        const toY = f.out ? farY : monY - r * 0.1;
+        const ex = fromX + (toX - fromX) * t;
+        const ey = fromY + (toY - fromY) * t - Math.sin(t * Math.PI) * r * 0.15;
+        const alpha = t < 0.15 ? t / 0.15 : t > 0.8 ? (1 - t) / 0.2 : 1;
+        const scale = f.out ? 0.5 + t * 0.6 : 1.1 - t * 0.6;
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        ctx.translate(ex, ey);
+        ctx.scale(scale, scale);
+        ctx.rotate(f.ang * 0.3);
+        ctx.fillStyle = accent;
+        roundRectPath(ctx, -r * 0.09, -r * 0.06, r * 0.18, r * 0.12, 2);
+        ctx.fill();
+        ctx.strokeStyle = outlineColor;
+        ctx.lineWidth = r * 0.015;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.09, -r * 0.06);
+        ctx.lineTo(0, r * 0.01);
+        ctx.lineTo(r * 0.09, -r * 0.06);
+        ctx.stroke();
+        ctx.restore();
+      }
       break;
     }
     case "Finance": {
