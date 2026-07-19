@@ -87,6 +87,7 @@ async function buildPortrait() {
     totalVisits: totalWeight,
     busiestHour,
     theme,
+    prefix,
   });
 }
 
@@ -98,6 +99,7 @@ function render({
   totalVisits,
   busiestHour,
   theme,
+  prefix,
 }) {
   const W = canvas.width;
   const H = canvas.height;
@@ -114,25 +116,27 @@ function render({
   ctx.fillText("YOUR HISTORYGRAM", W / 2, 140);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "800 88px 'Segoe UI', sans-serif";
-  wrapCenteredText(title, W / 2, 260, 900, 96);
+  ctx.font = "800 78px 'Segoe UI', sans-serif";
+  wrapCenteredText(title, W / 2, 240, 900, 84);
+
+  drawMascot(ctx, W / 2, 500, 150, topCategory, prefix);
 
   ctx.font = "500 30px 'Segoe UI', sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.fillText(`Top category: ${topCategory}`, W / 2, 460);
+  ctx.fillText(`Top category: ${topCategory}`, W / 2, 720);
 
   // Stat row
-  drawStat(W * 0.27, 580, uniqueSites, "sites visited");
-  drawStat(W * 0.73, 580, formatHour(busiestHour), "busiest hour");
+  drawStat(W * 0.27, 830, uniqueSites, "sites visited");
+  drawStat(W * 0.73, 830, formatHour(busiestHour), "busiest hour");
 
   // Top domains list
   ctx.textAlign = "center";
   ctx.font = "600 28px 'Segoe UI', sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillText("TOP SITES", W / 2, 730);
+  ctx.fillText("TOP SITES", W / 2, 970);
 
   const maxCount = topDomains[0][1];
-  let y = 780;
+  let y = 1020;
   for (const [domain, count] of topDomains) {
     const barMaxWidth = 700;
     const barWidth = Math.max(20, (count / maxCount) * barMaxWidth);
