@@ -122,26 +122,8 @@ function drawMascot(ctx, cx, cy, r, category, prefix, time = 0) {
 
   if (expr.sparkles) drawSparkles(ctx, cx, cy, r);
 
-  // Stub arm reaching toward the prop
-  const propAngle = -0.35;
-  ctx.fillStyle = bodyColor;
-  ctx.strokeStyle = outlineColor;
-  ctx.lineWidth = r * 0.04;
-  ctx.beginPath();
-  ctx.ellipse(
-    cx + Math.cos(propAngle) * r * 0.85,
-    cy + Math.sin(propAngle) * r * 0.85 + r * 0.35,
-    r * 0.16,
-    r * 0.11,
-    propAngle,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
-  ctx.stroke();
-
   const accent = theme.to;
-  drawProp(ctx, cx, cy, r, category, accent, outlineColor);
+  drawAction(ctx, cx, cy, r, category, accent, outlineColor, bodyColor, time);
 
   if (prefix === "Night Owl ") drawNightModifier(ctx, cx, cy, r);
   else if (prefix === "Early Bird ") drawMorningModifier(ctx, cx, cy, r);
@@ -281,6 +263,20 @@ function drawTail(ctx, cx, cy, r, bodyColor, outlineColor, time = 0) {
   ctx.quadraticCurveTo(-r * 0.35, -r * 0.1, -r * 0.28, -r * 0.42);
   ctx.quadraticCurveTo(-r * 0.05, -r * 0.28, 0, 0);
   ctx.closePath();
+  ctx.fillStyle = bodyColor;
+  ctx.fill();
+  ctx.lineWidth = r * 0.04;
+  ctx.strokeStyle = outlineColor;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHand(ctx, x, y, angle, r, bodyColor, outlineColor) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.16, r * 0.11, 0, 0, Math.PI * 2);
   ctx.fillStyle = bodyColor;
   ctx.fill();
   ctx.lineWidth = r * 0.04;
@@ -448,7 +444,14 @@ function drawSparkles(ctx, cx, cy, r) {
   ctx.restore();
 }
 
-function drawProp(ctx, cx, cy, r, category, accent, outlineColor) {
+function pulseWindow(time, cycle, windowMs) {
+  const t = time % cycle;
+  if (t < cycle - windowMs) return 0;
+  const p = (t - (cycle - windowMs)) / windowMs;
+  return Math.sin(p * Math.PI);
+}
+
+function drawAction(ctx, cx, cy, r, category, accent, outlineColor, bodyColor, time) {
   const px = cx + r * 0.95;
   const py = cy + r * 0.55;
 
@@ -463,9 +466,14 @@ function drawProp(ctx, cx, cy, r, category, accent, outlineColor) {
       ctx.stroke();
       ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.fillRect(px - r * 0.24, py - r * 0.16, r * 0.48, r * 0.24);
+
+      const bounce = Math.sin(time / 130) * r * 0.025;
+      drawHand(ctx, px - r * 0.13, py + r * 0.24 - bounce, -0.15, r, bodyColor, outlineColor);
+      drawHand(ctx, px + r * 0.13, py + r * 0.24 + bounce, 0.15, r, bodyColor, outlineColor);
       break;
     }
     case "Entertainment": {
+      ctx.fillStyle = accent;
       ctx.beginPath();
       ctx.moveTo(px - r * 0.22, py - r * 0.28);
       ctx.lineTo(px + r * 0.22, py - r * 0.28);
@@ -474,113 +482,216 @@ function drawProp(ctx, cx, cy, r, category, accent, outlineColor) {
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+      drawHand(ctx, px + r * 0.3, py + r * 0.1, 0.3, r, bodyColor, outlineColor);
+
+      // a kernel arcs from the bucket up to the mouth on a loop
+      const phase = (time % 1300) / 1300;
+      if (phase < 0.82) {
+        const mouthX = cx;
+        const mouthY = cy + r * 0.31;
+        const startX = px - r * 0.05;
+        const startY = py - r * 0.2;
+        const kx = startX + (mouthX - startX) * phase;
+        const straightY = startY + (mouthY - startY) * phase;
+        const ky = straightY - Math.sin(phase * Math.PI) * r * 0.35;
+        ctx.beginPath();
+        ctx.arc(kx, ky, r * 0.045, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffe9a8";
+        ctx.fill();
+      }
       break;
     }
     case "Social": {
-      roundRectPath(ctx, px - r * 0.18, py - r * 0.3, r * 0.36, r * 0.58, 8);
+      // held up for a selfie, with a periodic camera flash
+      const sx = cx + r * 0.62;
+      const sy = cy - r * 0.08;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(-0.3);
+      ctx.fillStyle = accent;
+      roundRectPath(ctx, -r * 0.16, -r * 0.28, r * 0.32, r * 0.52, 7);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#ff5c7a";
-      heart(ctx, px, py, r * 0.1);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.14, r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      drawHand(ctx, sx - r * 0.05, sy + r * 0.32, -0.3, r, bodyColor, outlineColor);
+
+      const flash = pulseWindow(time, 2400, 180);
+      if (flash > 0) {
+        ctx.save();
+        ctx.globalAlpha = flash * 0.85;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r * 0.55, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.restore();
+      }
       break;
     }
     case "Shopping": {
+      const swing = Math.sin(time / 650) * 0.12;
+      ctx.save();
+      ctx.translate(px, py - r * 0.15);
+      ctx.rotate(swing);
+      ctx.fillStyle = accent;
       ctx.beginPath();
-      ctx.moveTo(px - r * 0.24, py - r * 0.24);
-      ctx.lineTo(px + r * 0.24, py - r * 0.24);
-      ctx.lineTo(px + r * 0.3, py + r * 0.3);
-      ctx.lineTo(px - r * 0.3, py + r * 0.3);
+      ctx.moveTo(-r * 0.24, -r * 0.09);
+      ctx.lineTo(r * 0.24, -r * 0.09);
+      ctx.lineTo(r * 0.3, r * 0.45);
+      ctx.lineTo(-r * 0.3, r * 0.45);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(px, py - r * 0.24, r * 0.12, Math.PI, 0);
+      ctx.arc(0, -r * 0.09, r * 0.12, Math.PI, 0);
       ctx.stroke();
+      ctx.restore();
+      drawHand(ctx, px, py + r * 0.15, swing, r, bodyColor, outlineColor);
       break;
     }
     case "News": {
-      roundRectPath(ctx, px - r * 0.32, py - r * 0.18, r * 0.64, r * 0.36, 4);
+      const flip = Math.sin(time / 900);
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.transform(1, 0, flip * 0.15, 1, 0, 0);
+      roundRectPath(ctx, -r * 0.32, -r * 0.18, r * 0.64, r * 0.36, 4);
+      ctx.fillStyle = accent;
       ctx.fill();
       ctx.stroke();
       ctx.strokeStyle = "rgba(255,255,255,0.8)";
       ctx.lineWidth = 3;
       for (let i = -1; i <= 1; i++) {
         ctx.beginPath();
-        ctx.moveTo(px - r * 0.24, py + i * r * 0.1);
-        ctx.lineTo(px + r * 0.24, py + i * r * 0.1);
+        ctx.moveTo(-r * 0.24, i * r * 0.1);
+        ctx.lineTo(r * 0.24, i * r * 0.1);
         ctx.stroke();
       }
+      ctx.restore();
+      drawHand(ctx, px - r * 0.28, py + r * 0.16, -0.2, r, bodyColor, outlineColor);
+      drawHand(ctx, px + r * 0.28, py + r * 0.16, 0.2, r, bodyColor, outlineColor);
       break;
     }
     case "Search": {
+      const scan = Math.sin(time / 850) * r * 0.14;
       ctx.beginPath();
-      ctx.arc(px - r * 0.05, py - r * 0.05, r * 0.22, 0, Math.PI * 2);
+      ctx.arc(px - r * 0.05 + scan, py - r * 0.05, r * 0.22, 0, Math.PI * 2);
       ctx.lineWidth = 8;
       ctx.strokeStyle = accent;
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(px + r * 0.12, py + r * 0.12);
-      ctx.lineTo(px + r * 0.3, py + r * 0.3);
+      ctx.moveTo(px + r * 0.12 + scan, py + r * 0.12);
+      ctx.lineTo(px + r * 0.3 + scan, py + r * 0.3);
       ctx.strokeStyle = outlineColor;
       ctx.lineWidth = r * 0.05;
       ctx.stroke();
+      drawHand(ctx, px + r * 0.3 + scan, py + r * 0.32, 0.3, r, bodyColor, outlineColor);
       break;
     }
     case "Email": {
       roundRectPath(ctx, px - r * 0.3, py - r * 0.2, r * 0.6, r * 0.4, 4);
+      ctx.fillStyle = "#ffffff";
       ctx.fill();
       ctx.stroke();
+
+      const wiggle = Math.sin(time / 160) * r * 0.05;
+      ctx.save();
+      ctx.translate(px + wiggle, py - r * 0.02);
+      ctx.rotate(-0.5);
+      ctx.fillStyle = accent;
+      roundRectPath(ctx, -r * 0.03, -r * 0.22, r * 0.06, r * 0.3, 3);
+      ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(px - r * 0.3, py - r * 0.2);
-      ctx.lineTo(px, py + r * 0.05);
-      ctx.lineTo(px + r * 0.3, py - r * 0.2);
-      ctx.strokeStyle = outlineColor;
-      ctx.stroke();
+      ctx.moveTo(-r * 0.03, r * 0.08);
+      ctx.lineTo(r * 0.03, r * 0.08);
+      ctx.lineTo(0, r * 0.16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      drawHand(ctx, px + wiggle, py + r * 0.22, -0.5, r, bodyColor, outlineColor);
       break;
     }
     case "Finance": {
-      for (const [dx, dy] of [[0, r * 0.1], [r * 0.08, -r * 0.05], [-r * 0.08, -r * 0.18]]) {
-        ctx.beginPath();
-        ctx.arc(px + dx, py + dy, r * 0.18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      }
+      const spin = time / 400;
+      const squish = Math.abs(Math.cos(spin));
+      const flipY = py - r * 0.5 - Math.abs(Math.sin(spin * 0.6)) * r * 0.15;
+      ctx.save();
+      ctx.translate(px, flipY);
+      ctx.scale(squish, 1);
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.16, 0, Math.PI * 2);
+      ctx.fillStyle = accent;
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      drawHand(ctx, px, py + r * 0.1, 0, r, bodyColor, outlineColor);
       ctx.fillStyle = "#ffffff";
-      ctx.font = `700 ${Math.round(r * 0.18)}px sans-serif`;
+      ctx.font = `700 ${Math.round(r * 0.16)}px sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillText("$", px - r * 0.08, py - r * 0.12);
+      ctx.fillText("$", px, py - r * 0.05);
       break;
     }
     case "Productivity": {
       roundRectPath(ctx, px - r * 0.26, py - r * 0.32, r * 0.52, r * 0.62, 5);
+      ctx.fillStyle = accent;
       ctx.fill();
       ctx.stroke();
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = r * 0.04;
-      for (const dy of [-r * 0.12, r * 0.05, r * 0.2]) {
+      for (const dy of [-r * 0.12, r * 0.05]) {
         ctx.beginPath();
         ctx.moveTo(px - r * 0.16, py + dy);
         ctx.lineTo(px + r * 0.16, py + dy);
         ctx.stroke();
       }
+
+      const drawPhase = pulseWindow(time, 1800, 900);
+      if (drawPhase > 0) {
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = r * 0.05;
+        ctx.lineCap = "round";
+        const p1 = Math.min(1, drawPhase * 2);
+        ctx.beginPath();
+        ctx.moveTo(px - r * 0.14, py + r * 0.2);
+        ctx.lineTo(px - r * 0.14 + r * 0.08 * p1, py + r * 0.2 + r * 0.08 * p1);
+        if (drawPhase > 0.4) {
+          const p2 = Math.min(1, (drawPhase - 0.4) * 1.6);
+          ctx.lineTo(px + r * 0.16, py + r * 0.2 - r * 0.14 * p2);
+        }
+        ctx.stroke();
+      }
+
+      drawHand(ctx, px + r * 0.2, py + r * 0.35, 0.2, r, bodyColor, outlineColor);
       break;
     }
     case "Reference": {
+      const flip = Math.sin(time / 950);
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.transform(1, 0, flip * 0.1, 1, 0, 0);
+      ctx.fillStyle = accent;
       ctx.beginPath();
-      ctx.moveTo(px - r * 0.28, py - r * 0.2);
-      ctx.lineTo(px, py - r * 0.12);
-      ctx.lineTo(px + r * 0.28, py - r * 0.2);
-      ctx.lineTo(px + r * 0.28, py + r * 0.22);
-      ctx.lineTo(px, py + r * 0.14);
-      ctx.lineTo(px - r * 0.28, py + r * 0.22);
+      ctx.moveTo(-r * 0.28, -r * 0.2);
+      ctx.lineTo(0, -r * 0.12);
+      ctx.lineTo(r * 0.28, -r * 0.2);
+      ctx.lineTo(r * 0.28, r * 0.22);
+      ctx.lineTo(0, r * 0.14);
+      ctx.lineTo(-r * 0.28, r * 0.22);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(px, py - r * 0.12);
-      ctx.lineTo(px, py + r * 0.14);
+      ctx.moveTo(0, -r * 0.12);
+      ctx.lineTo(0, r * 0.14);
       ctx.strokeStyle = outlineColor;
       ctx.stroke();
+      ctx.restore();
+      drawHand(ctx, px - r * 0.26, py + r * 0.2, -0.2, r, bodyColor, outlineColor);
+      drawHand(ctx, px + r * 0.26, py + r * 0.2, 0.2, r, bodyColor, outlineColor);
       break;
     }
     case "Maps & Travel": {
@@ -589,17 +700,36 @@ function drawProp(ctx, cx, cy, r, category, accent, outlineColor) {
       ctx.quadraticCurveTo(px - r * 0.28, py, px, py - r * 0.3);
       ctx.quadraticCurveTo(px + r * 0.28, py, px, py + r * 0.32);
       ctx.closePath();
+      ctx.fillStyle = accent;
       ctx.fill();
       ctx.stroke();
       ctx.beginPath();
       ctx.arc(px, py - r * 0.08, r * 0.1, 0, Math.PI * 2);
       ctx.fillStyle = "#ffffff";
       ctx.fill();
+      drawHand(ctx, px, py + r * 0.34, 0, r, bodyColor, outlineColor);
+
+      // a little paper airplane loops around overhead
+      const loop = time / 1100;
+      const lx = cx + Math.cos(loop) * r * 1.15;
+      const ly = cy - r * 0.9 + Math.sin(loop) * r * 0.22;
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(loop + Math.PI / 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.12);
+      ctx.lineTo(r * 0.06, r * 0.1);
+      ctx.lineTo(0, r * 0.05);
+      ctx.lineTo(-r * 0.06, r * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
       break;
     }
     case "AI & Assistants": {
-      ctx.fillStyle = accent;
       roundRectPath(ctx, px - r * 0.28, py - r * 0.22, r * 0.56, r * 0.36, 10);
+      ctx.fillStyle = accent;
       ctx.fill();
       ctx.stroke();
       ctx.beginPath();
@@ -608,34 +738,53 @@ function drawProp(ctx, cx, cy, r, category, accent, outlineColor) {
       ctx.lineTo(px + r * 0.02, py + r * 0.16);
       ctx.closePath();
       ctx.fill();
+
+      const dotPhase = Math.floor(time / 260) % 3;
       ctx.fillStyle = "#ffffff";
-      ctx.font = `700 ${Math.round(r * 0.16)}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.fillText("✦", px, py + r * 0.02);
+      for (let i = 0; i < 3; i++) {
+        const active = dotPhase === i;
+        ctx.beginPath();
+        ctx.arc(px - r * 0.14 + i * r * 0.14, py - r * 0.04, active ? r * 0.05 : r * 0.03, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawHand(ctx, px - r * 0.05, py + r * 0.34, 0, r, bodyColor, outlineColor);
       break;
     }
     case "Music": {
+      const phase = (time % 1700) / 1700;
+      ctx.save();
+      ctx.globalAlpha = 1 - phase;
       ctx.fillStyle = accent;
-      ctx.font = `700 ${Math.round(r * 0.6)}px sans-serif`;
+      ctx.font = `700 ${Math.round(r * 0.5)}px sans-serif`;
       ctx.textAlign = "center";
-      ctx.strokeStyle = outlineColor;
-      ctx.lineWidth = r * 0.02;
-      ctx.fillText("♪", px, py + r * 0.2);
+      ctx.fillText("♪", px, py + r * 0.25 - phase * r * 0.9);
+      ctx.restore();
+      drawHand(ctx, px - r * 0.05, py + r * 0.32, -0.2, r, bodyColor, outlineColor);
       break;
     }
     default: {
+      const wobble = Math.sin(time / 260) * 0.4 + Math.sin(time / 410) * 0.3;
       ctx.beginPath();
       ctx.arc(px, py, r * 0.24, 0, Math.PI * 2);
+      ctx.fillStyle = accent;
       ctx.fill();
       ctx.stroke();
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(wobble);
       ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.moveTo(px, py - r * 0.16);
-      ctx.lineTo(px + r * 0.06, py);
-      ctx.lineTo(px, py + r * 0.16);
-      ctx.lineTo(px - r * 0.06, py);
+      ctx.moveTo(0, -r * 0.16);
+      ctx.lineTo(r * 0.06, 0);
+      ctx.lineTo(0, r * 0.16);
+      ctx.lineTo(-r * 0.06, 0);
       ctx.closePath();
       ctx.fill();
+      ctx.restore();
+
+      const scratch = Math.sin(time / 300) * r * 0.04;
+      drawHand(ctx, cx - r * 0.5, cy - r * 0.75 + scratch, 0.6, r, bodyColor, outlineColor);
     }
   }
 }
